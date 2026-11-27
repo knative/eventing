@@ -25,15 +25,21 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	kubetesting "k8s.io/client-go/testing"
 	"k8s.io/utils/pointer"
 	duckv1 "knative.dev/pkg/apis/duck/v1"
 	"knative.dev/pkg/injection"
@@ -502,4 +508,187 @@ func callableSucceed(writer http.ResponseWriter, _ *http.Request) {
 	writer.Header().Set("Content-Type", cloudevents.ApplicationJSON)
 	writer.WriteHeader(http.StatusOK)
 	_, _ = writer.Write([]byte("{}"))
+}
+
+func TestFanoutEventHandlerDispatchDurationWithDeadLetterSink(t *testing.T) {
+	testCases := map[string]struct {
+		deadLetterStatus int
+		expectedStatus   int
+	}{
+		"dead letter sink accepts the event": {
+			deadLetterStatus: http.StatusAccepted,
+			expectedStatus:   http.StatusAccepted,
+		},
+		"dead letter sink fails": {
+			deadLetterStatus: http.StatusInternalServerError,
+			expectedStatus:   http.StatusInternalServerError,
+		},
+	}
+	for n, tc := range testCases {
+		t.Run(n, func(t *testing.T) {
+			const subscriberDelay = 100 * time.Millisecond
+			subscriber := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				time.Sleep(subscriberDelay)
+				w.WriteHeader(http.StatusServiceUnavailable)
+			}))
+			defer subscriber.Close()
+			healthySubscriber := httptest.NewServer(http.HandlerFunc(callableSucceed))
+			defer healthySubscriber.Close()
+			deadLetterSink := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tc.deadLetterStatus)
+			}))
+			defer deadLetterSink.Close()
+
+			reader := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(reader))
+			defer mp.Shutdown(context.Background())
+			dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), nil)
+			subscriptions := []Subscription{
+				{
+					Name:       "failing",
+					Namespace:  "channelnamespace",
+					Subscriber: duckv1.Addressable{URL: apis.HTTP(subscriber.Listener.Addr().String())},
+					DeadLetter: &duckv1.Addressable{URL: apis.HTTP(deadLetterSink.Listener.Addr().String())},
+				},
+				{
+					Name:       "healthy",
+					Namespace:  "channelnamespace",
+					Subscriber: duckv1.Addressable{URL: apis.HTTP(healthySubscriber.Listener.Addr().String())},
+				},
+			}
+			h, err := NewFanoutEventHandler(zap.NewNop(), Config{Subscriptions: subscriptions}, nil, nil, nil, dispatcher, mp, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			labeler := &otelhttp.Labeler{}
+			ctx := otelhttp.ContextWithLabeler(t.Context(), labeler)
+			req := httptest.NewRequestWithContext(ctx, http.MethodPost, "http://channelname.channelnamespace/", nil)
+			event := makeCloudEvent()
+			if err := bindingshttp.WriteRequest(ctx, binding.ToMessage(&event), req); err != nil {
+				t.Fatal(err)
+			}
+			resp := httptest.NewRecorder()
+			h.ServeHTTP(resp, req)
+			if resp.Code != tc.expectedStatus {
+				t.Fatalf("Unexpected status code. Expected %v, Actual %v", tc.expectedStatus, resp.Code)
+			}
+
+			var points []metricdata.HistogramDataPoint[float64]
+			for start := time.Now(); len(points) < len(subscriptions) && time.Since(start) < 5*time.Second; time.Sleep(10 * time.Millisecond) {
+				points = dispatchDurationPoints(t, reader)
+			}
+			if len(points) != len(subscriptions) {
+				t.Fatalf("Expected %d dispatch duration series, got %d", len(subscriptions), len(points))
+			}
+
+			wantStatuses := map[string]int64{
+				"subscription:failing.channelnamespace": http.StatusServiceUnavailable,
+				"subscription:healthy.channelnamespace": http.StatusOK,
+			}
+			gotStatuses := make(map[string]int64, len(points))
+			for _, point := range points {
+				destination, _ := point.Attributes.Value(semconv.MessagingDestinationNameKey)
+				status, _ := point.Attributes.Value(semconv.HTTPResponseStatusCodeKey)
+				gotStatuses[destination.AsString()] = status.AsInt64()
+				if point.Count != 1 {
+					t.Errorf("Expected 1 dispatch for %s, got %d", destination.AsString(), point.Count)
+				}
+				if destination.AsString() == "subscription:failing.channelnamespace" && point.Sum < subscriberDelay.Seconds() {
+					t.Errorf("Expected failed dispatch lasting at least %v, got %vs", subscriberDelay, point.Sum)
+				}
+			}
+			if diff := cmp.Diff(wantStatuses, gotStatuses); diff != "" {
+				t.Errorf("Unexpected dispatch statuses (-want +got):\n%s", diff)
+			}
+			for _, attr := range labeler.Get() {
+				if attr.Key == semconv.HTTPResponseStatusCodeKey {
+					t.Errorf("Found a subscription status in the shared request labeler: %v", attr.Value)
+				}
+			}
+		})
+	}
+}
+
+func TestFanoutDoesNotRecordDispatchDurationWhenTokenRequestFails(t *testing.T) {
+	ctx, client := fakekubeclient.With(t.Context())
+	client.PrependReactor("create", "serviceaccounts", func(action kubetesting.Action) (bool, runtime.Object, error) {
+		if action.GetSubresource() == "token" {
+			return true, nil, errors.New("token request failed")
+		}
+		return false, nil, nil
+	})
+
+	subscriberRequests := atomic.NewInt32(0)
+	subscriber := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		subscriberRequests.Inc()
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer subscriber.Close()
+	deadLetterRequests := atomic.NewInt32(0)
+	deadLetterSink := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		deadLetterRequests.Inc()
+		w.WriteHeader(http.StatusAccepted)
+	}))
+	defer deadLetterSink.Close()
+
+	sub := Subscription{
+		Name:      "oidc",
+		Namespace: "channelnamespace",
+		Subscriber: duckv1.Addressable{
+			URL:      apis.HTTP(subscriber.Listener.Addr().String()),
+			Audience: pointer.String("subscriber-audience"),
+		},
+		DeadLetter:     &duckv1.Addressable{URL: apis.HTTP(deadLetterSink.Listener.Addr().String())},
+		ServiceAccount: &types.NamespacedName{Name: "delivery", Namespace: "channelnamespace"},
+	}
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	defer mp.Shutdown(context.Background())
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), auth.NewOIDCTokenProvider(ctx))
+	h, err := NewFanoutEventHandler(zap.NewNop(), Config{}, nil, nil, nil, dispatcher, mp, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := h.makeFanoutRequest(ctx, makeCloudEvent(), nil, sub)
+	if err != nil {
+		t.Fatalf("Sending to the dead letter sink failed: %v", err)
+	}
+	if got := subscriberRequests.Load(); got != 0 {
+		t.Errorf("Expected no requests to the subscriber, got %d", got)
+	}
+	if got := deadLetterRequests.Load(); got != 1 {
+		t.Errorf("Expected 1 request to the dead letter sink, got %d", got)
+	}
+
+	h.recordDispatchDuration(ctx, sub, info)
+	if points := dispatchDurationPoints(t, reader); len(points) != 0 {
+		t.Errorf("Expected no dispatch duration samples, got %v", points)
+	}
+}
+
+func dispatchDurationPoints(t *testing.T, reader *metric.ManualReader) []metricdata.HistogramDataPoint[float64] {
+	t.Helper()
+	var rm metricdata.ResourceMetrics
+	if err := reader.Collect(context.Background(), &rm); err != nil {
+		t.Fatal(err)
+	}
+	var points []metricdata.HistogramDataPoint[float64]
+	for _, sm := range rm.ScopeMetrics {
+		if sm.Scope.Name != ScopeName {
+			continue
+		}
+		for _, m := range sm.Metrics {
+			if m.Name != "kn.eventing.dispatch.duration" {
+				continue
+			}
+			for _, point := range m.Data.(metricdata.Histogram[float64]).DataPoints {
+				if point.Count > 0 {
+					points = append(points, point)
+				}
+			}
+		}
+	}
+	return points
 }

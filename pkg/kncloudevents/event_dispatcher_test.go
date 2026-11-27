@@ -890,10 +890,12 @@ func TestSendEvent(t *testing.T) {
 						}
 					}
 				case "deadLetter":
-					if tc.fakeDeadLetterResponse != nil {
-						if tc.fakeDeadLetterResponse.StatusCode != info.ResponseCode {
-							t.Errorf("Unexpected response code in DispatchResultInfo. Expected %v. Actual: %v", tc.fakeDeadLetterResponse.StatusCode, info.ResponseCode)
-						}
+					failedResponse := tc.fakeResponse
+					if tc.fakeReplyResponse != nil {
+						failedResponse = tc.fakeReplyResponse
+					}
+					if failedResponse.StatusCode != info.ResponseCode {
+						t.Errorf("Unexpected response code in DispatchResultInfo. Expected %v. Actual: %v", failedResponse.StatusCode, info.ResponseCode)
 					}
 				case "reply":
 					if tc.fakeReplyResponse != nil {
@@ -1183,7 +1185,7 @@ func TestDispatchMessageToTLSEndpointWithDeadLetterSink(t *testing.T) {
 	message := binding.ToMessage(&eventToSend)
 	info, err := dispatcher.SendMessage(ctx, message, destination, kncloudevents.WithDeadLetterSink(&dls))
 	require.Nil(t, err)
-	require.Equal(t, 200, info.ResponseCode)
+	require.Equal(t, http.StatusInternalServerError, info.ResponseCode)
 
 	// check received events
 	close(dlsEventChan)
