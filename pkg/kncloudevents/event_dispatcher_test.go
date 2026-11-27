@@ -40,9 +40,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	"knative.dev/pkg/injection"
@@ -56,10 +59,14 @@ import (
 
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventingtls/eventingtlstesting"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
 	"knative.dev/eventing/pkg/utils"
+
+	"knative.dev/pkg/observability/metrics/metricstest"
 )
 
 var (
@@ -1292,5 +1299,402 @@ func canonicalizeHeaders(rvs ...requestValidation) {
 				headers[n] = v
 			}
 		}
+	}
+}
+
+func TestSendEventRecordsDroppedEventWhenDLSFails(t *testing.T) {
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("test-event-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	// Keep a parent span active so the drop is recorded within the request
+	// trace.
+	ctx, parentSpan := tp.Tracer("test").Start(ctx, "parent")
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+		kncloudevents.WithDropLabels(eventdrop.Labels{
+			Subscription: &types.NamespacedName{Namespace: "test-ns", Name: "test-subscription"},
+		}),
+	)
+	parentSpan.End()
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+			observability.SubscriptionName.With("test-subscription"),
+			observability.SubscriptionNamespace.With("test-ns"),
+		),
+	)
+
+	assertSingleDropSpan(t, exporter, map[string]string{
+		string(observability.DropReason):            string(eventdrop.ReasonDeadLetterSinkFailed),
+		string(observability.SubscriptionName):      "test-subscription",
+		string(observability.SubscriptionNamespace): "test-ns",
+		string(observability.CloudEventID):          "test-event-id",
+	})
+}
+
+// assertSingleDropSpan asserts exactly one dedicated drop span was exported
+// and that its attributes include all the wanted entries.
+func assertSingleDropSpan(t *testing.T, exporter *tracetest.InMemoryExporter, want map[string]string) {
+	t.Helper()
+
+	dropSpans := 0
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		dropSpans++
+
+		attrs := map[string]string{}
+		for _, kv := range span.Attributes {
+			attrs[string(kv.Key)] = kv.Value.Emit()
+		}
+		for key, wantValue := range want {
+			if got := attrs[key]; got != wantValue {
+				t.Errorf("drop span: expected attribute %s=%q, got %q", key, wantValue, got)
+			}
+		}
+	}
+	if dropSpans != 1 {
+		t.Errorf("expected exactly 1 drop span, got %d", dropSpans)
+	}
+}
+
+func TestSendEventRecordsDroppedSpanWhenRequestSpanEnded(t *testing.T) {
+	// Background deliveries may continue after the request span already
+	// ended: the drop must still be traced as a span of its own.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("test-event-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	ctx, requestSpan := tp.Tracer("test").Start(ctx, "ended-request")
+	requestSpan.End()
+
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"))
+
+	dropSpans := 0
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		dropSpans++
+
+		attrs := map[string]string{}
+		for _, kv := range span.Attributes {
+			attrs[string(kv.Key)] = kv.Value.Emit()
+		}
+		for key, want := range map[string]string{
+			string(observability.DropReason):   string(eventdrop.ReasonDeadLetterSinkFailed),
+			string(observability.CloudEventID): "test-event-id",
+		} {
+			if got := attrs[key]; got != want {
+				t.Errorf("drop span: expected attribute %s=%q, got %q", key, want, got)
+			}
+		}
+	}
+	if dropSpans != 1 {
+		t.Errorf("expected exactly 1 drop span, got %d", dropSpans)
+	}
+}
+
+func TestSendEventRecordsDroppedEventWhenReplyAndDLSFail(t *testing.T) {
+	// When the reply cannot be delivered and the dead letter sink, which
+	// receives the original event, fails as well, the drop is recorded without
+	// the original event's details: what was lost is the reply.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	// The destination replies with a CloudEvent.
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "application/cloudevents+json; charset=UTF-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"reply-id","source":"reply-source","type":"reply-type","specversion":"1.0"}`))
+	}))
+	defer destServer.Close()
+	// The reply destination rejects the reply event.
+	replyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer replyServer.Close()
+	// The dead letter sink rejects the original event as well.
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("original-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	_, err := dispatcher.SendEvent(context.Background(), event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithReply(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, replyServer.URL)}),
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+		metricstest.HasAttributes(eventdrop.ScopeName, "kn.eventing.events.dropped",
+			observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+		),
+	)
+
+	// The drop is recorded without the original event's details: what was
+	// lost is the reply, and it must not claim the original event was lost.
+	assertSingleDropSpan(t, exporter, map[string]string{
+		string(observability.DropReason): string(eventdrop.ReasonDeadLetterSinkFailed),
+	})
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		for _, kv := range span.Attributes {
+			if kv.Key == attribute.Key(string(observability.CloudEventID)) {
+				t.Errorf("drop span must not carry the original event's ID, got %s", kv.Value.Emit())
+			}
+		}
+	}
+}
+
+func TestSendEventConcurrentSharedOptionsSlice(t *testing.T) {
+	// Callers may reuse an options slice with spare capacity across concurrent
+	// SendEvent calls: the internally appended option must not write into it,
+	// and each drop record must carry its own event's identity.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	// A slice with spare capacity, shared by all calls.
+	sharedOptions := make([]kncloudevents.SendOption, 0, 8)
+	sharedOptions = append(sharedOptions,
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+
+	const calls = 8
+	traceIDs := make([]string, calls)
+	var wg sync.WaitGroup
+	for i := range calls {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			event := cloudevents.NewEvent(cloudevents.VersionV1)
+			event.SetID(fmt.Sprintf("event-%d", i))
+			event.SetType("testtype")
+			event.SetSource("testsource")
+
+			// Each call runs under its own parent span, so every drop can be
+			// attributed to its call via the trace ID.
+			callCtx, parent := tp.Tracer("test").Start(ctx, fmt.Sprintf("call-%d", i))
+			traceIDs[i] = parent.SpanContext().TraceID().String()
+			defer parent.End()
+
+			_, err := dispatcher.SendEvent(callCtx, event,
+				duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+				sharedOptions...,
+			)
+			if err == nil {
+				t.Error("expected the dispatch to fail, got nil error")
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	expected := map[string]string{}
+	for i, traceID := range traceIDs {
+		expected[traceID] = fmt.Sprintf("event-%d", i)
+	}
+
+	ids := map[string]int{}
+	for _, span := range exporter.GetSpans() {
+		if span.Name != "kn.eventing.event.dropped" {
+			continue
+		}
+		for _, kv := range span.Attributes {
+			if kv.Key != attribute.Key(string(observability.CloudEventID)) {
+				continue
+			}
+			got := kv.Value.Emit()
+			if want := expected[span.SpanContext.TraceID().String()]; got != want {
+				t.Errorf("drop span in trace of request %s is attributed to %s", want, got)
+			}
+			ids[got]++
+		}
+	}
+	if len(ids) != calls {
+		t.Errorf("expected %d distinct event IDs on drop spans, got %v", calls, ids)
+	}
+	for id, n := range ids {
+		if n != 1 {
+			t.Errorf("event %s: expected exactly 1 drop span, got %d", id, n)
+		}
+	}
+
+	metricstest.AssertMetrics(t, reader,
+		metricstest.MetricsPresent(eventdrop.ScopeName, "kn.eventing.events.dropped"),
+	)
+}
+
+func TestSendEventDropRecordJoinsDeliveryTrace(t *testing.T) {
+	// From an entry context without a valid span context, the drop record
+	// must land in the same trace as the delivery attempts.
+	ctx := context.Background()
+	ctx, _ = fakekubeclient.With(ctx)
+	ctx = injection.WithConfig(ctx, &rest.Config{})
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	exporter := tracetest.NewInMemoryExporter()
+	tp := trace.NewTracerProvider(trace.WithSyncer(exporter))
+	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	oidcTokenProvider := auth.NewOIDCTokenProvider(ctx)
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), oidcTokenProvider,
+		kncloudevents.WithMeterProvider(mp),
+		kncloudevents.WithTraceProvider(tp),
+	)
+
+	destServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer destServer.Close()
+	deadLetterSinkServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer deadLetterSinkServer.Close()
+
+	event := cloudevents.NewEvent(cloudevents.VersionV1)
+	event.SetID("test-event-id")
+	event.SetType("testtype")
+	event.SetSource("testsource")
+
+	_, err := dispatcher.SendEvent(ctx, event,
+		duckv1.Addressable{URL: getOnlyDomainURL(t, true, destServer.URL)},
+		kncloudevents.WithDeadLetterSink(&duckv1.Addressable{URL: getOnlyDomainURL(t, true, deadLetterSinkServer.URL)}),
+	)
+	if err == nil {
+		t.Fatal("expected the dispatch to fail, got nil error")
+	}
+
+	deliveryTraceIDs := map[string]bool{}
+	dropTraceID := ""
+	for _, span := range exporter.GetSpans() {
+		if strings.HasPrefix(span.Name, "send ") {
+			deliveryTraceIDs[span.SpanContext.TraceID().String()] = true
+		}
+		if span.Name == "kn.eventing.event.dropped" {
+			dropTraceID = span.SpanContext.TraceID().String()
+		}
+	}
+	if dropTraceID == "" {
+		t.Fatal("no drop span was recorded")
+	}
+	if !deliveryTraceIDs[dropTraceID] {
+		t.Errorf("drop span trace %s is not among the delivery traces %v", dropTraceID, deliveryTraceIDs)
 	}
 }

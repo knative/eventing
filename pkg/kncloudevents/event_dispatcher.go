@@ -46,6 +46,7 @@ import (
 	eventingapis "knative.dev/eventing/pkg/apis"
 	v1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/eventtype"
 	"knative.dev/eventing/pkg/observability"
@@ -142,6 +143,24 @@ func WithEventTypeAutoHandler(handler *eventtype.EventTypeAutoHandler, ref *duck
 	}
 }
 
+// WithDropLabels attaches object identities to the Dispatcher's drop telemetry
+// when delivery to the dead letter sink fails.
+func WithDropLabels(labels eventdrop.Labels) SendOption {
+	return func(sc *senderConfig) error {
+		sc.dropLabels = labels
+		return nil
+	}
+}
+
+// withDropEvent passes the event being sent to the drop telemetry, which
+// attaches its details to the recorded drop span.
+func withDropEvent(event *event.Event) SendOption {
+	return func(sc *senderConfig) error {
+		sc.dropEvent = event
+		return nil
+	}
+}
+
 type senderConfig struct {
 	reply                *duckv1.Addressable
 	deadLetterSink       *duckv1.Addressable
@@ -153,6 +172,8 @@ type senderConfig struct {
 	eventTypeRef         *duckv1.KReference
 	eventTypeOnwerUID    types.UID
 	eventFormat          *v1.FormatType
+	dropLabels           eventdrop.Labels
+	dropEvent            *event.Event
 }
 
 type Dispatcher struct {
@@ -160,6 +181,7 @@ type Dispatcher struct {
 	clientConfig      eventingtls.ClientConfig
 	traceProvider     trace.TracerProvider
 	meterProvider     metric.MeterProvider
+	eventDrops        *eventdrop.Recorder
 }
 
 type DispatcherOption func(*Dispatcher)
@@ -194,6 +216,8 @@ func NewDispatcher(clientConfig eventingtls.ClientConfig, oidcTokenProvider *aut
 		d.meterProvider = otel.GetMeterProvider()
 	}
 
+	d.eventDrops = eventdrop.NewRecorder(d.meterProvider, d.traceProvider)
+
 	return d
 }
 
@@ -208,13 +232,33 @@ func (d *Dispatcher) SendEvent(ctx context.Context, event event.Event, destinati
 
 	message := binding.ToMessage(&c)
 
-	return d.SendMessage(ctx, message, destination, options...)
+	// Build a fresh slice: appending to the caller's options could write into
+	// its spare capacity and race with concurrent SendEvent calls sharing it.
+	opts := make([]SendOption, 0, len(options)+1)
+	opts = append(opts, options...)
+	opts = append(opts, withDropEvent(&c))
+
+	return d.SendMessage(ctx, message, destination, opts...)
+}
+
+// recordEventDropped records a dropped event in the trace of the entry
+// context. When the entry context carries no valid span context, e.g. when
+// SendEvent is called from a background context, the delivery context is used
+// instead so the drop lands in the same trace as the delivery attempts.
+func (d *Dispatcher) recordEventDropped(entryCtx, deliveryCtx context.Context, config *senderConfig, event *cloudevents.Event) {
+	recordCtx := entryCtx
+	if !trace.SpanContextFromContext(entryCtx).IsValid() {
+		recordCtx = deliveryCtx
+	}
+	d.eventDrops.RecordEventDropped(recordCtx, eventdrop.ReasonDeadLetterSinkFailed, config.dropLabels, event)
 }
 
 // SendMessage sends the given message to the given destination.
 // SendMessage is kept for compatibility and SendEvent should be used whenever possible.
 // Note: for event labels to be applied to the metrics and span for this message,
-// you will need to add them to the context using WithEventLabels
+// you will need to add them to the context using WithEventLabels.
+// Event details are also not attached to the event drop telemetry; only
+// SendEvent knows the event being sent
 func (d *Dispatcher) SendMessage(ctx context.Context, message binding.Message, destination duckv1.Addressable, options ...SendOption) (*DispatchInfo, error) {
 	config := &senderConfig{
 		additionalHeaders: make(http.Header),
@@ -231,6 +275,10 @@ func (d *Dispatcher) SendMessage(ctx context.Context, message binding.Message, d
 }
 
 func (d *Dispatcher) send(ctx context.Context, message binding.Message, destination duckv1.Addressable, config *senderConfig) (*DispatchInfo, error) {
+	// executeRequest returns a context whose span has already ended, so keep
+	// the parent context around for the event drop telemetry.
+	parentCtx := ctx
+
 	dispatchExecutionInfo := &DispatchInfo{}
 
 	// All messages that should be finished at the end of this function
@@ -246,10 +294,18 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 		return dispatchExecutionInfo, fmt.Errorf("can not dispatch message to nil destination.URL")
 	}
 
-	// sanitize eventual host-only URLs
+	// sanitize eventual host-only URLs. Sanitize copies of the pointed-to
+	// Addressables: they may be shared across concurrent SendEvent calls via
+	// the send options, and sanitizeAddressable writes in place.
 	destination = *sanitizeAddressable(&destination)
-	config.reply = sanitizeAddressable(config.reply)
-	config.deadLetterSink = sanitizeAddressable(config.deadLetterSink)
+	if config.reply != nil {
+		reply := *config.reply
+		config.reply = sanitizeAddressable(&reply)
+	}
+	if config.deadLetterSink != nil {
+		deadLetterSink := *config.deadLetterSink
+		config.deadLetterSink = sanitizeAddressable(&deadLetterSink)
+	}
 
 	// send to destination
 
@@ -293,6 +349,9 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
+				// The event could neither be delivered to the destination nor to the
+				// dead letter sink, so it is dropped.
+				d.recordEventDropped(parentCtx, ctx, config, config.dropEvent)
 				return dispatchExecutionInfo, fmt.Errorf("unable to complete request to either %s (%v) or %s (%v)", destination.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {
@@ -357,6 +416,11 @@ func (d *Dispatcher) send(ctx context.Context, message binding.Message, destinat
 				append(config.transformers, dispatchTransformers),
 			)
 			if deadLetterErr != nil {
+				// The reply could not be delivered and the dead letter sink, which
+				// receives the original event, failed as well. The details of the
+				// original event are not attached: what was lost is the reply,
+				// which is a message and carries no event here.
+				d.recordEventDropped(parentCtx, ctx, config, nil)
 				return dispatchExecutionInfo, fmt.Errorf("failed to forward reply to %s (%v) and failed to send it to the dead letter sink %s (%v)", config.reply.URL, err, config.deadLetterSink.URL, deadLetterErr)
 			}
 			if deadLetterResponse != nil {

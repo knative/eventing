@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	filteredFactory "knative.dev/pkg/client/injection/kube/informers/factory/filtered"
@@ -63,7 +64,10 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventfilter/subscriptionsapi"
+	"knative.dev/eventing/pkg/observability"
+	"knative.dev/eventing/test/lib/metrics"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	triggerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/trigger/fake"
@@ -117,6 +121,7 @@ func TestReceiver(t *testing.T) {
 		expectedEventDispatchTime   bool
 		expectedEventProcessingTime bool
 		expectedResponseHeaders     http.Header
+		wantRejectionReason         eventdrop.Reason
 	}{
 		"Not POST": {
 			request:        httptest.NewRequest(http.MethodGet, validPath, nil),
@@ -158,7 +163,9 @@ func TestReceiver(t *testing.T) {
 					Attributes: map[string]string{"type": "some-other-type"},
 				})),
 			},
-			event: makeEventWithoutTTL(),
+			event:               makeEventWithoutTTL(),
+			expectedStatus:      http.StatusBadRequest,
+			wantRejectionReason: eventdrop.ReasonTTLMissing,
 		},
 		"Wrong type": {
 			triggers: []*eventingv1.Trigger{
@@ -205,6 +212,7 @@ func TestReceiver(t *testing.T) {
 			triggers: []*eventingv1.Trigger{
 				makeTrigger(withAttributesFilter(&eventingv1.TriggerFilter{})),
 			},
+			expectedStatus:              http.StatusAccepted,
 			expectedDispatch:            true,
 			expectedEventDispatchTime:   true,
 			expectedEventProcessingTime: true,
@@ -566,6 +574,17 @@ func TestReceiver(t *testing.T) {
 			if len(expectedMetricNames) > 0 {
 				metricstest.AssertMetrics(t, reader, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 			}
+
+			var wantRejected []metricdata.DataPoint[int64]
+			if tc.wantRejectionReason != "" {
+				wantRejected = append(wantRejected, metrics.Point(1,
+					observability.DropReason.With(string(tc.wantRejectionReason)),
+					observability.TriggerName.With(triggerName),
+					observability.TriggerNamespace.With(testNS),
+				))
+			}
+			metrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.rejected", wantRejected...)
+			metrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.dropped")
 
 			if tc.expectedResponseEvent != nil {
 				if tc.expectedResponseEvent.SpecVersion() != event.CloudEventsVersionV1 {

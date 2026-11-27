@@ -27,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
@@ -57,6 +58,9 @@ import (
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/eventing/pkg/auth"
 	"knative.dev/eventing/pkg/broker"
+	"knative.dev/eventing/pkg/eventdrop"
+	"knative.dev/eventing/pkg/observability"
+	"knative.dev/eventing/test/lib/metrics"
 
 	brokerinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1/broker/fake"
 	eventpolicyinformerfake "knative.dev/eventing/pkg/client/injection/informers/eventing/v1alpha1/eventpolicy/fake"
@@ -89,6 +93,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 		defaulter              client.EventDefaulter
 		brokers                []*eventingv1.Broker
 		expectDispatchDuration bool
+		wantRejectionReason    eventdrop.Reason
 	}{
 		{
 			name:       "invalid method PATCH",
@@ -185,7 +190,7 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			},
 		},
 		{
-			name:       "no TTL drop event",
+			name:       "reject event without TTL",
 			method:     nethttp.MethodPost,
 			uri:        "/ns/name",
 			body:       getValidEvent(),
@@ -194,6 +199,19 @@ func TestHandler_ServeHTTP(t *testing.T) {
 			brokers: []*eventingv1.Broker{
 				makeBroker("name", "ns"),
 			},
+			wantRejectionReason: eventdrop.ReasonTTLMissing,
+		},
+		{
+			name:       "reject event with exhausted TTL",
+			method:     nethttp.MethodPost,
+			uri:        "/ns/name",
+			body:       getEventWithTTL(0),
+			statusCode: nethttp.StatusBadRequest,
+			handler:    handler(),
+			brokers: []*eventingv1.Broker{
+				makeBroker("name", "ns"),
+			},
+			wantRejectionReason: eventdrop.ReasonTTLExhausted,
 		},
 		{
 			name:       "malformed request URI",
@@ -362,6 +380,16 @@ func TestHandler_ServeHTTP(t *testing.T) {
 
 			assertions = append(assertions, metricstest.MetricsPresent(ScopeName, expectedMetricNames...))
 			metricstest.AssertMetrics(t, reader, assertions...)
+
+			var wantRejected []metricdata.DataPoint[int64]
+			if tc.wantRejectionReason != "" {
+				wantRejected = append(wantRejected, metrics.Point(1,
+					observability.DropReason.With(string(tc.wantRejectionReason)),
+					observability.BrokerName.With("name"),
+					observability.BrokerNamespace.With("ns"),
+				))
+			}
+			metrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.rejected", wantRejected...)
 		})
 	}
 }
@@ -386,6 +414,18 @@ func getValidEvent() io.Reader {
 	e.SetType("type")
 	e.SetSource("source")
 	e.SetID("1234")
+	b, _ := e.MarshalJSON()
+	return bytes.NewBuffer(b)
+}
+
+func getEventWithTTL(ttl int32) io.Reader {
+	e := event.New()
+	e.SetType("type")
+	e.SetSource("source")
+	e.SetID("1234")
+	if err := broker.SetTTL(e.Context, ttl); err != nil {
+		panic(err)
+	}
 	b, _ := e.MarshalJSON()
 	return bytes.NewBuffer(b)
 }

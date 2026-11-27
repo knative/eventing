@@ -41,8 +41,11 @@ import (
 
 	eventingduckv1 "knative.dev/eventing/pkg/apis/duck/v1"
 	"knative.dev/eventing/pkg/auth"
+	"knative.dev/eventing/pkg/eventdrop"
 	"knative.dev/eventing/pkg/eventingtls"
 	"knative.dev/eventing/pkg/kncloudevents"
+	"knative.dev/eventing/pkg/observability"
+	"knative.dev/eventing/test/lib/metrics"
 
 	cloudevents "github.com/cloudevents/sdk-go/v2"
 	"github.com/cloudevents/sdk-go/v2/binding"
@@ -329,6 +332,45 @@ func TestFanoutEventHandler_ServeHTTP(t *testing.T) {
 			testFanoutEventHandler(t, true, tc.receiverFunc, tc.timeout, tc.subs, tc.subscriber, tc.subscriberReqs, tc.replier, tc.replierReqs, tc.asyncExpectedStatus)
 		})
 	}
+}
+
+func TestFanoutEventHandlerRecordsDropWhenDeadLetterSinkFails(t *testing.T) {
+	subscriber := httptest.NewServer(http.NotFoundHandler())
+	defer subscriber.Close()
+	var dlsRequests atomic.Int32
+	dls := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		dlsRequests.Inc()
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer dls.Close()
+
+	sub := Subscription{
+		Name:       "test-subscription",
+		Namespace:  "channelnamespace",
+		Subscriber: duckv1.Addressable{URL: apis.HTTP(subscriber.Listener.Addr().String())},
+		DeadLetter: &duckv1.Addressable{URL: apis.HTTP(dls.Listener.Addr().String())},
+	}
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	dispatcher := kncloudevents.NewDispatcher(eventingtls.NewDefaultClientConfig(), nil, kncloudevents.WithMeterProvider(mp))
+	h, err := NewFanoutEventHandler(zap.NewNop(), Config{Subscriptions: []Subscription{sub}}, nil, nil, nil, dispatcher, mp, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "http://channelname.channelnamespace/", nil)
+	event := makeCloudEvent()
+	if err := bindingshttp.WriteRequest(t.Context(), binding.ToMessage(&event), req); err != nil {
+		t.Fatal(err)
+	}
+	resp := httptest.NewRecorder()
+	h.ServeHTTP(resp, req)
+	if resp.Code != http.StatusInternalServerError || dlsRequests.Load() != 1 {
+		t.Fatalf("got HTTP %d and %d dead letter requests, want HTTP 500 and 1 request", resp.Code, dlsRequests.Load())
+	}
+	metrics.AssertCounter(t, reader, eventdrop.ScopeName, "kn.eventing.events.dropped", metrics.Point(1,
+		observability.SubscriptionName.With(sub.Name),
+		observability.DropReason.With(string(eventdrop.ReasonDeadLetterSinkFailed)),
+	))
 }
 
 func testFanoutEventHandler(t *testing.T, async bool, receiverFunc channel.EventReceiverFunc, timeout time.Duration, inSubs []Subscription, subscriberHandler func(http.ResponseWriter, *http.Request), subscriberReqs int, replierHandler func(http.ResponseWriter, *http.Request), replierReqs int, expectedStatus int) {
