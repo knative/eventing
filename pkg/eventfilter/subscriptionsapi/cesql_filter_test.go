@@ -69,6 +69,18 @@ func TestCESQLFilter(t *testing.T) {
 			expression: fmt.Sprintf("missingattribute = %s", "missinsvalue"),
 			want:       eventfilter.FailFilter,
 		},
+		"Non-boolean string literal": {
+			expression: "'abc'",
+			want:       eventfilter.FailFilter,
+		},
+		"Non-boolean attribute": {
+			expression: "source",
+			want:       eventfilter.FailFilter,
+		},
+		"Non-boolean integer literal": {
+			expression: "1",
+			want:       eventfilter.FailFilter,
+		},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
