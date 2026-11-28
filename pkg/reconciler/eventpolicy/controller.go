@@ -19,6 +19,8 @@ package eventpolicy
 import (
 	"context"
 
+	"k8s.io/client-go/tools/cache"
+
 	"knative.dev/eventing/pkg/apis/feature"
 	"knative.dev/pkg/logging"
 
@@ -61,7 +63,13 @@ func NewController(
 	}
 
 	// Set up event handlers
-	eventPolicyInformer.Informer().AddEventHandler(controller.HandleAll(impl.Enqueue))
+	// On delete only drop the EventPolicy from the tracker; otherwise stale tracker
+	// entries keep re-enqueueing the deleted EventPolicy.
+	eventPolicyInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    impl.Enqueue,
+		UpdateFunc: controller.PassNew(impl.Enqueue),
+		DeleteFunc: impl.Tracker.OnDeletedObserver,
+	})
 
 	return impl
 }
