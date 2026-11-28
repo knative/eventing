@@ -245,6 +245,8 @@ func (h *IngressHandler) getEvent(id string, rr *v1alpha1.RequestReply) (*proxie
 func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http.ResponseWriter, event *cloudevents.Event, rr *v1alpha1.RequestReply, headers http.Header) {
 	h.logger.Debug("handling new event")
 	pr := h.addEvent(responseWriter, event, rr)
+	// Unregister on every return, including the error paths below.
+	defer h.deleteEvent(event, rr)
 
 	brokerAddress, err := h.getBrokerAddress(rr)
 	if err != nil {
@@ -288,11 +290,9 @@ func (h *IngressHandler) handleNewEvent(ctx context.Context, responseWriter http
 				h.logger.Error("failed to send event back", zap.Error(err))
 			}
 			msg.Finish(err)
-			h.deleteEvent(event, rr)
 			return
 		case <-ctx.Done():
 			h.logger.Warn("context timeout reached before encountering a response to the event, discarding event", zap.String("event id", event.ID()))
-			h.deleteEvent(event, rr)
 			return
 		}
 	}
