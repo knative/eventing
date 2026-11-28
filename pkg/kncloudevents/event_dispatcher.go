@@ -583,16 +583,33 @@ func dispatchExecutionInfoTransformers(destination *apis.URL, dispatchExecutionI
 
 	destination = sanitizeURL(destination)
 
-	// Encodes response body as base64 for the resulting length.
-	bodyLen := len(httpResponseBody)
-	encodedLen := base64.StdEncoding.EncodedLen(bodyLen)
-	if encodedLen > attributes.KnativeErrorDataExtensionMaxLength {
-		encodedLen = attributes.KnativeErrorDataExtensionMaxLength
+	// Encodes response body as base64, truncated so the encoded form fits in the
+	// knativeerrordata extension (KnativeErrorDataExtensionMaxLength characters).
+	maxEncodedLen := attributes.KnativeErrorDataExtensionMaxLength
+	maxRawLen := maxRawLenForBase64(maxEncodedLen)
+	if len(httpResponseBody) > maxRawLen {
+		httpResponseBody = httpResponseBody[:maxRawLen]
 	}
+	encodedLen := base64.StdEncoding.EncodedLen(len(httpResponseBody))
 	encodedBuf := make([]byte, encodedLen)
 	base64.StdEncoding.Encode(encodedBuf, httpResponseBody)
 
-	return attributes.KnativeErrorTransformers(*destination.URL(), dispatchExecutionInfo.ResponseCode, string(encodedBuf[:encodedLen]))
+	return attributes.KnativeErrorTransformers(*destination.URL(), dispatchExecutionInfo.ResponseCode, string(encodedBuf))
+}
+
+// maxRawLenForBase64 returns the largest source length whose standard base64 encoding
+// uses at most maxEncodedLen bytes.
+func maxRawLenForBase64(maxEncodedLen int) int {
+	if maxEncodedLen <= 0 {
+		return 0
+	}
+	// EncodedLen(n) = 4 * ((n + 2) / 3)
+	for n := (maxEncodedLen / 4) * 3; n >= 0; n-- {
+		if base64.StdEncoding.EncodedLen(n) <= maxEncodedLen {
+			return n
+		}
+	}
+	return 0
 }
 
 // isFailure returns true if the status code is not a successful HTTP status.
